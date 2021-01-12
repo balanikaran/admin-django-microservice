@@ -1,0 +1,52 @@
+# specifying the version of docker-compose
+version: "3.8"
+
+# specifying services
+services:
+  # service 1: name=backend
+  backend:
+    build:
+      # path basically
+      context: .
+      # name of dockerfile to be used
+      dockerfile: Dockerfile
+    command: 'python manage.py runserver 0.0.0.0:8000'
+    ports:
+      # local_machine_port:inside_container_port
+      - 8000:8000
+    volumes:
+      # making a sync between root folder '.' and inside container 'app' folder
+      # changes are reflected in both directions automatically
+      - .:/app
+    # this service will only run if 'db' service is run successfuly
+    depends_on:
+      - db
+
+  # service 2: rabbitmq queue service
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # setup consuming from django side
+    command: 'python consumer.py'
+    depends_on:
+      - db
+
+  # service 3: database service
+  db:
+    # choosing an image for container
+    image: mysql:5.7.22
+    # automatically restart the container if shutsdown
+    restart: always
+    # setting up mysql env variables [can be choosen yourself]
+    environment:
+      MYSQL_DATABASE: admin
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: root
+    # making a sync between db file to see it locally
+    volumes:
+      - .dbdata:/var/lib/mysql
+    ports:
+      # mapping local port to conatiner port to access db
+      - 33066:3306
